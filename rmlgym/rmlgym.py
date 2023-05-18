@@ -1,11 +1,16 @@
+import json
+import socket
 from abc import abstractmethod
 from typing import TypeVar, Generic, Tuple
 from typing import Optional
+from tqdm import tqdm
+import numpy as np
+import matplotlib.pyplot as plt
 
 import gym
 from gym import error, spaces
 
-from gym.utils import closer, seeding
+#from gym.utils import closer, seeding
 # from gym.logger import deprecation
 
 ObsType = TypeVar("ObsType")
@@ -53,7 +58,6 @@ class RMLGym(gym.core.Env):
             except yaml.YAMLError as exc:
                 print(exc)
         # print(config_dict)
-
         # Make the environment if it is not already provided
         if env is not None:
             self.env = env
@@ -64,14 +68,12 @@ class RMLGym(gym.core.Env):
         self._observation_space = None
         self._reward_range = None
         self._metadata = None
-
-        # Initialize variables for analyzing RM: specifications
-        #--------------------------------------------------------
-        self.rml_spec = rtamt.STLDiscreteTimeSpecification()
-        #-----------------------------------------------------
         self.data = dict()
+        self.json_data = dict() #Json data for rmlgym
         self.data['time'] = []
         self.step_num = 0
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect((config_dict['host'],config_dict['port']))
 
         # Pull time information if it is provided
         self.timestep = 1 if 'timestep' not in config_dict.keys() else config_dict['timestep']
@@ -83,39 +85,11 @@ class RMLGym(gym.core.Env):
         # Sort through specified constants that will be used in the specifications
         if 'constants' in config_dict.keys():
             constants = config_dict['constants']
-            for i in constants:
-                self.rml_spec.declare_const(i['name'], i['type'], i['value'])
 
         # Sort through specified variables that will be tracked
         self.rml_variables = config_dict['variables']
         for i in self.rml_variables:
-            self.rml_spec.declare_var(i['name'], i['type'])
             self.data[i['name']] = []
-            if 'i/o' in i.keys():
-                self.rml_spec.set_var_io_type(i['name'], i['i/o'])
-
-        # Collect specifications
-        self.specifications = config_dict['specifications']
-        spec_str = "out = "
-        for i in self.specifications:
-            self.rml_spec.declare_var(i['name'], 'float')
-            self.rml_spec.add_sub_spec(i['spec'])
-            spec_str += i['name'] + ' and '
-            if 'weight' not in i.keys():
-                i['weight'] = 1.0
-        spec_str = spec_str[:-5]
-        self.rml_spec.declare_var('out', 'float')
-        self.rml_spec.spec = spec_str
-
-        # Parse the specification
-        try:
-            self.rml_spec.parse()
-        
-        except rtamt.STLParseException as err:
-            print('STL Parse Exception: {}'.format(err))
-            sys.exit()
-        #----------------------------------------
-
     def __getattr__(self, name):
         if name.startswith("_"):
             raise AttributeError(f"attempted to get missing private attribute {name}")
@@ -183,35 +157,42 @@ class RMLGym(gym.core.Env):
             done (bool): whether the episode has ended, in which case further step() calls will return undefined results
             info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)
         """
-        o, _, done, info = self.env.step(action)
-
+        o, reward, done, truncated, info = self.env.step(action)
         # Record and increment the time
+        json_data = dict()
+        json_data['sender'] = ''
+        json_data['reciever'] = ''
+        json_data['action'] = [float(a) for a in action]
         self.data['time'].append(self.step_num * self.timestep)
+        json_data['time'] = self.step_num * self.timestep
         self.step_num += 1
-
+        observations = dict()
+        
         # Add variables to their lists
         for i in self.rml_variables:
             if i['location'] == 'obs':
+                observations['location'] = i['location']
                 self.data[i['name']].append(o[i['identifier']])
+                observations[i['name']] = float(o[i['identifier']])
             elif i['location'] == 'info':
-                # keys = i['identifier'].split(', ')
-                # datum = info[keys[0]]
-                # for k in range(1, len(keys)):
-                #     datum = datum[keys[i]]
-                # self.data[i['name']].append(datum)
                 self.data[i['name']].append(info[i['identifier']])
+                observations[i['name']] = float(info[i['identifier']])
             elif i['location'] == 'state':
                 self.data[i['name']].append(self.__getattr__(i['identifier']))
+                observations[i['name']] = float(self.__getattr__(i['identifier']))
             else:
                 # make an error for this
                 print('ERROR ERROR')
+        json_data['observations'] = observations
+        json_data['done'] = done
         
+
         # Calculate the reward
-        reward, reward_info = self.compute_reward(done)
-
-        info.update(reward_info)
-
-        return o, reward, done, info
+        #reward, reward_info = self.compute_reward(done)
+        self.monitor_reward(json_data)
+        #info.update(reward_info)
+        #print(self.data)
+        return o, reward, done, truncated ,info
 
     def reset(self, **kwargs):
         """
@@ -225,21 +206,26 @@ class RMLGym(gym.core.Env):
         Returns:
             observation (object): the initial observation.
         """
-        # Reset the RML variable data
+        # Reset the STL variable data
         self.step_num = 0
         for key in self.data.keys():
             self.data[key] = []
         return self.env.reset(**kwargs)
-
     def render(self, mode="human", **kwargs):
-        return self.env.render(mode, **kwargs)
+        #return self.env.render(mode, **kwargs)
+        return self.env.render(**kwargs)
 
     def close(self):
+        self.sock.close()
         return self.env.close()
 
     def seed(self, seed=None):
         return self.env.seed(seed)
-
+    def monitor_reward(self, data: dict) -> Tuple[float, dict]:
+        json_string = json.dumps(data)
+        self.sock.sendall(json_string.encode())
+        return
+    
     def compute_reward(self, done: bool) -> Tuple[float, dict]:
         """
         Computes the reward returned to the agent. The reward is only computed if 
@@ -259,28 +245,22 @@ class RMLGym(gym.core.Env):
             if (self.timestep * self.step_num) < self.horizon_length:
                 reward = -1.0
             else:
-                rob = self.rml_spec.evaluate(self.data)
+                rob = self.stl_spec.evaluate(self.data)
                 for i in self.specifications:
-                    # print(self.rml_spec.get_value(i['name']))
-                    val = self.rml_spec.get_value(i['name'])[0]
+                    # print(self.stl_spec.get_value(i['name']))
+                    val = self.stl_spec.get_value(i['name'])[0]
                     info[i['name']] = val
                     reward += float(i['weight']) * val
             # print(f'robustness: {str(rob[-1])}, reward: {reward}')
         if self.dense and (self.timestep * self.step_num) > self.horizon_length:
-            rob = self.rml_spec.evaluate(self.data)
+            rob = self.stl_spec.evaluate(self.data)
             for i in self.specifications:
-                # print(self.rml_spec.get_value(i['name']))
-                val = self.rml_spec.get_value(i['name'])[0]
+                # print(self.stl_spec.get_value(i['name']))
+                val = self.stl_spec.get_value(i['name'])
                 info[i['name']] = val
                 reward += float(i['weight']) * val
-        # if (self.timestep * self.step_num) > self.horizon_length:
-        #     rob = self.rml_spec.evaluate(self.data)
-        #     for i in self.specifications:
-        #         # print(self.rml_spec.get_value(i['name']))
-        #         val = self.rml_spec.get_value(i['name'])[0]
-        #         info[i['name']] = val
-        #         reward += float(i['weight']) * val
         return reward, info
+
 
     def __str__(self):
         return f"<{type(self).__name__}{self.env}>"
@@ -291,41 +271,3 @@ class RMLGym(gym.core.Env):
     @property
     def unwrapped(self):
         return self.env.unwrapped
-
-if __name__ == "__main__":
-    import numpy as np
-    from environments import *
-    
-    config_path = './examples/pendulum_keep_up.yaml'
-    env = RMLym(config_path)
-    num_evals = 100
-    max_ep_len = 200
-    render = False  # True
-
-    ep_returns = []
-    ep_lengths = []
-
-    for ep in range(num_evals):
-        env.reset()
-        ep_return = 0
-        ep_len = 0
-        for i in range(max_ep_len):
-            if render:
-                env.render()
-                # time.sleep(1e-3)
-            th, thdot = env.state
-            u = np.array([((-32.0 / np.pi) * th) + ((-1.0 / np.pi) * thdot)])
-            _, r, done, info = env.step(u)
-            ep_return += r
-            ep_len += 1
-            if done and i < (max_ep_len - 1):
-                print(f"Failed: {env.state[0]} > {np.pi / 3.}; step: {i}")
-                break
-        ep_returns.append(ep_return)
-        ep_lengths.append(ep_len)
-    
-    # Compute the averages and print them
-    ep_rets = np.array(ep_returns)
-    ep_lens = np.array(ep_lengths)
-    print(f'Avg Return: {np.mean(ep_rets)} +- {np.std(ep_rets)}, Avg Length: {np.mean(ep_lens)}')
-    
