@@ -1,5 +1,6 @@
 import json
-import socket
+import asyncio
+import websocket
 from abc import abstractmethod
 from typing import TypeVar, Generic, Tuple
 from typing import Optional
@@ -19,6 +20,16 @@ ActType = TypeVar("ActType")
 import yaml
 import rtamt
 import sys
+
+class CustomEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
 
 def make(config_path: str, env=None) -> "RMLGym":
     return RMLGym(config_path, env)
@@ -59,21 +70,25 @@ class RMLGym(gym.core.Env):
                 print(exc)
         # print(config_dict)
         # Make the environment if it is not already provided
+
         if env is not None:
             self.env = env
         else:
-            self.env = gym.make(config_dict['env_name'])
+            self.env = gym.make(config_dict['env_name'], render_mode=config_dict['mode'])
 
         self._action_space = None
         self._observation_space = None
         self._reward_range = None
         self._metadata = None
         self.data = dict()
-        self.json_data = dict() #Json data for rmlgym
+        #self.json_data = dict() #Json data for rmlgym
         self.data['time'] = []
         self.step_num = 0
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((config_dict['host'],config_dict['port']))
+        # Create a WebSocket object.
+        self.ws = websocket.WebSocket()
+        host = f'ws://{config_dict["host"]}:{config_dict["port"]}'
+        # Connect the WebSocket object to the server.
+        self.ws.connect(host)
 
         # Pull time information if it is provided
         self.timestep = 1 if 'timestep' not in config_dict.keys() else config_dict['timestep']
@@ -88,8 +103,11 @@ class RMLGym(gym.core.Env):
 
         # Sort through specified variables that will be tracked
         self.rml_variables = config_dict['variables']
+        self.rewards = config_dict['reward']
         for i in self.rml_variables:
             self.data[i['name']] = []
+        self.data['action'] = []
+        
     def __getattr__(self, name):
         if name.startswith("_"):
             raise AttributeError(f"attempted to get missing private attribute {name}")
@@ -159,37 +177,38 @@ class RMLGym(gym.core.Env):
         """
         o, reward, done, truncated, info = self.env.step(action)
         # Record and increment the time
-        json_data = dict()
-        json_data['sender'] = ''
-        json_data['reciever'] = ''
-        json_data['action'] = [float(a) for a in action]
-        self.data['time'].append(self.step_num * self.timestep)
-        json_data['time'] = self.step_num * self.timestep
+        #json_data = dict()
+        #json_data['sender'] = ''
+        #json_data['reciever'] = ''
+        #json_data['action'] = action
+        #self.data['time'].append(self.step_num * self.timestep)
+        #self.data['action'].append(action)
+        #json_data['time'] = self.step_num * self.timestep
         self.step_num += 1
         observations = dict()
-        
         # Add variables to their lists
         for i in self.rml_variables:
             if i['location'] == 'obs':
                 observations['location'] = i['location']
-                self.data[i['name']].append(o[i['identifier']])
+                #self.data[i['name']].append(o[i['identifier']])
                 observations[i['name']] = float(o[i['identifier']])
             elif i['location'] == 'info':
-                self.data[i['name']].append(info[i['identifier']])
+                #self.data[i['name']].append(info[i['identifier']])
                 observations[i['name']] = float(info[i['identifier']])
             elif i['location'] == 'state':
-                self.data[i['name']].append(self.__getattr__(i['identifier']))
+                #self.data[i['name']].append(self.__getattr__(i['identifier']))
                 observations[i['name']] = float(self.__getattr__(i['identifier']))
             else:
                 # make an error for this
                 print('ERROR ERROR')
-        json_data['observations'] = observations
-        json_data['done'] = done
+        self.data = observations
+        #json_data['observations'] = observations
+        #json_data['done'] = done
         
 
         # Calculate the reward
         #reward, reward_info = self.compute_reward(done)
-        self.monitor_reward(json_data)
+        reward = self.monitor_reward(done)
         #info.update(reward_info)
         #print(self.data)
         return o, reward, done, truncated ,info
@@ -216,51 +235,43 @@ class RMLGym(gym.core.Env):
         return self.env.render(**kwargs)
 
     def close(self):
-        self.sock.close()
+        #self.ws.close()
         return self.env.close()
 
     def seed(self, seed=None):
         return self.env.seed(seed)
-    def monitor_reward(self, data: dict) -> Tuple[float, dict]:
-        json_string = json.dumps(data)
-        self.sock.sendall(json_string.encode())
-        return
-    
-    def compute_reward(self, done: bool) -> Tuple[float, dict]:
-        """
-        Computes the reward returned to the agent. The reward is only computed if 
-        the trace has ended, otherwise the reward is 0.
+    def monitor_reward(self, done: bool) -> Tuple[float, dict]:
+        #print(data)
 
-        The reward is calculated according to how well the specifications were satisfied
-        according to the "degree of robustness" metric.
-        Args:
-            done    (bool):     Boolean value indicating if the  done condition(s) has/have been met.
-        Returns:
-            reward  (float):    Float value used for evaluating performance.
-        """
-        reward = 0
-        info = dict()
-        
+        #NOT DENSE
         if (not self.dense) and done:
+            #print("Done : ",done,", Dense : ", self.dense)
+            #print("TS : ",self.timestep, ", STEP NUM : ",self.step_num, ", HORIZON : ", self.horizon_length)
             if (self.timestep * self.step_num) < self.horizon_length:
                 reward = -1.0
             else:
-                rob = self.stl_spec.evaluate(self.data)
-                for i in self.specifications:
-                    # print(self.stl_spec.get_value(i['name']))
-                    val = self.stl_spec.get_value(i['name'])[0]
-                    info[i['name']] = val
-                    reward += float(i['weight']) * val
-            # print(f'robustness: {str(rob[-1])}, reward: {reward}')
+                #print(len(self.data['time']),len(self.data['pos']),len(self.data['pos_dot']))
+                do_nothing = 0
+        #DENSE
         if self.dense and (self.timestep * self.step_num) > self.horizon_length:
-            rob = self.stl_spec.evaluate(self.data)
-            for i in self.specifications:
-                # print(self.stl_spec.get_value(i['name']))
-                val = self.stl_spec.get_value(i['name'])
-                info[i['name']] = val
-                reward += float(i['weight']) * val
-        return reward, info
+            #print(len(self.data['time']),len(self.data['pos']),len(self.data['pos_dot']))
+            do_nothing = 0
 
+        #json_string = '{"angle":.5}'#json.dumps(self.data, cls=CustomEncoder)
+        json_string = json.dumps(self.data, cls=CustomEncoder)
+        
+        self.ws.send(json_string)
+        # Receive response from the server
+        response = self.ws.recv()
+        # Convert the JSON string to a Python dictionary
+        response = json.loads(response)
+        #monitor_rew = bool(response[1:])
+        #print(monitor_rew)
+
+        #response = json.loads(response)
+        # Check if the response is valid
+        reward = self.rewards[response['verdict']]
+        return reward
 
     def __str__(self):
         return f"<{type(self).__name__}{self.env}>"

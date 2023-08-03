@@ -1,0 +1,10 @@
+// alternating bit protocol: simpler version
+msg(ty) matches {event:'func_pre',name:'msg',args:[ty]};
+ack(ty) matches {event:'func_pre',name:'ack',args:[ty]};
+no_msg not matches msg(_);
+
+relevant matches msg(_) | ack(_);
+
+Main = relevant>>Prop1_2/\Prop3;
+Prop1_2 = (msg(1)ack(1))* | (msg(2)ack(2))*;
+Prop3 = (msg(1) no_msg* msg(2) no_msg*)*;

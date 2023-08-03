@@ -1,7 +1,8 @@
 env_name: Pendulum-v1
 dense: True
-host: localhost
-port: 12345
+host: 127.0.0.1
+port: 8080
+mode: rgb_array
 constants:
     - name: thresh
       type: float
@@ -22,6 +23,11 @@ variables:
       type: float
       location: obs
       identifier: 2
+reward:
+      true: 1
+      currently_true: 2
+      currently_false: -1
+      false: -1
 specifications:
     - name: task
       descriptor: Keep the pendulum angle within 1 radian with an angular velocity under +-10 rad/s

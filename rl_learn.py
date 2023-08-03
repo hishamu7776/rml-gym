@@ -8,7 +8,6 @@ config_path = './examples/pendulum_keep_up.yaml'
 # Create gym environment
 env = RMLGym(config_path)
 
-
 #env = gym.make('Pendulum-v1',  render_mode="rgb_array")
 # Create PPO instance with verbose=1
 model = PPO("MlpPolicy", env, verbose=1)
@@ -26,11 +25,11 @@ print("Model loaded...")
 obs = env.reset()[0]
 print("reset env...")
 env.close()
-'''
+
 while True:
   action, _states = model.predict(obs)
   obs, reward, done,truncated, info = env.step(action)  
   env.render()
   if done:
     obs = env.reset()[0]
-'''
+
