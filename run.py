@@ -1,12 +1,12 @@
 import gym
-import rmlgym
-from functools import partial
+from rmlgym import RMLGym
+
 
 if __name__ == "__main__":
     import numpy as np
     
     config_path = './examples/pendulum_keep_up.yaml'
-    env = partial(rmlgym.make, config_path)
+    env = RMLGym(config_path)
     num_evals = 100
     max_ep_len = 200
     render = False  # True
@@ -37,3 +37,4 @@ if __name__ == "__main__":
     ep_rets = np.array(ep_returns)
     ep_lens = np.array(ep_lengths)
     print(f'Avg Return: {np.mean(ep_rets)} +- {np.std(ep_rets)}, Avg Length: {np.mean(ep_lens)}')
+

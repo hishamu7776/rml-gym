@@ -23,6 +23,7 @@ setuptools.setup(
     install_requires=[
         "pyaml >= 21.10.1",
         "gym >= 0.15.7",
-        "numpy >= 1.18.5"
+        "numpy >= 1.18.5",
+        "websocket_client >= 1.3.1"
     ]
 )

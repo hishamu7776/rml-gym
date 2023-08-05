@@ -1,0 +1,18 @@
+Metadata-Version: 2.1
+Name: rmlgym
+Version: 0.0.1
+Summary: UNKNOWN
+Home-page: UNKNOWN
+Author: Hisham Unniyankal
+Author-email: uaj.hisham@gmail.com
+License: UNKNOWN
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6, <3.9
+Description-Content-Type: text/markdown
+
+# rml-gym
+A tool for modifying reinforcement learning environments to incorporate rml specifications in reward function
+
+
