@@ -1,25 +1,13 @@
 import json
-import asyncio
 import websocket
-from abc import abstractmethod
-from typing import TypeVar, Generic, Tuple
-from typing import Optional
-from tqdm import tqdm
 import numpy as np
-import matplotlib.pyplot as plt
-
 import gym
-from gym import error, spaces
-
-#from gym.utils import closer, seeding
-# from gym.logger import deprecation
+import yaml
+from typing import TypeVar, Tuple
 
 ObsType = TypeVar("ObsType")
 ActType = TypeVar("ActType")
 
-import yaml
-import rtamt
-import sys
 
 class CustomEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -175,7 +163,8 @@ class RMLGym(gym.core.Env):
             done (bool): whether the episode has ended, in which case further step() calls will return undefined results
             info (dict): contains auxiliary diagnostic information (helpful for debugging, and sometimes learning)
         """
-        o, reward, done, truncated, info = self.env.step(action)
+        #o, reward, done, truncated, info = self.env.step(action)
+        o, reward, done, info = self.env.step(action)
         # Record and increment the time
         #json_data = dict()
         #json_data['sender'] = ''
@@ -201,7 +190,9 @@ class RMLGym(gym.core.Env):
             else:
                 # make an error for this
                 print('ERROR ERROR')
+        
         self.data = observations
+        
         #json_data['observations'] = observations
         #json_data['done'] = done
         
@@ -211,7 +202,8 @@ class RMLGym(gym.core.Env):
         reward = self.monitor_reward(done)
         #info.update(reward_info)
         #print(self.data)
-        return o, reward, done, truncated ,info
+        #return o, reward, done, truncated ,info
+        return o, reward, done, info
 
     def reset(self, **kwargs):
         """
@@ -242,7 +234,7 @@ class RMLGym(gym.core.Env):
         return self.env.seed(seed)
     def monitor_reward(self, done: bool) -> Tuple[float, dict]:
         #print(data)
-
+        '''
         #NOT DENSE
         if (not self.dense) and done:
             #print("Done : ",done,", Dense : ", self.dense)
@@ -256,7 +248,7 @@ class RMLGym(gym.core.Env):
         if self.dense and (self.timestep * self.step_num) > self.horizon_length:
             #print(len(self.data['time']),len(self.data['pos']),len(self.data['pos_dot']))
             do_nothing = 0
-
+        '''
         #json_string = '{"angle":.5}'#json.dumps(self.data, cls=CustomEncoder)
         json_string = json.dumps(self.data, cls=CustomEncoder)
         
