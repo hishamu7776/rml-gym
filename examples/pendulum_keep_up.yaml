@@ -1,35 +1,27 @@
+
 env_name: Pendulum-v1
-dense: True
+horizon: 1
 host: 127.0.0.1
 port: 8080
-mode: rgb_array
+dense: True
 constants:
-    - name: thresh
+    - name: theta_thresh
       type: float
-      value: 1.0
-    - name: thresh_n
+      value: 0.5
+    - name: omega_thresh
       type: float
-      value:  -1.0
+      value:  0.1
 variables:
-    - name: x_y
-      type: float
-      location: obs
-      identifier: 0
-    - name: theta
-      type: float
-      location: obs
-      identifier: 1
     - name: omega
       type: float
       location: obs
       identifier: 2
+    - name: theta
+      type: float
+      location: info
+      identifier: theta
 reward:
       true: 1
       currently_true: 2
       currently_false: -1
       false: -1
-specifications:
-    - name: task
-      descriptor: Keep the pendulum angle within 1 radian with an angular velocity under +-10 rad/s
-      spec: task = always(abs(theta) <= thresh)
-      weight: 1.0
