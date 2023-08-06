@@ -62,7 +62,7 @@ class RMLGym(gym.core.Env):
         if env is not None:
             self.env = env
         else:
-            self.env = gym.make(config_dict['env_name'], render_mode=config_dict['mode'])
+            self.env = gym.make(config_dict['env_name'])
 
         self._action_space = None
         self._observation_space = None

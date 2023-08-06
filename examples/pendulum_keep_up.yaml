@@ -1,5 +1,5 @@
 
-env_name: Pendulum-v1
+env_name: Pendulum-v0
 horizon: 1
 host: 127.0.0.1
 port: 8080
