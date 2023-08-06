@@ -49,7 +49,6 @@ class RMLGym(gym.core.Env):
         """
         TODO: description
         """
-
         # Read the config YAML file
         with open(config_path, "r") as stream:
             try:

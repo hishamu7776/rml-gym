@@ -18,8 +18,8 @@ variables:
       identifier: 2
     - name: theta
       type: float
-      location: info
-      identifier: theta
+      location: obs
+      identifier: 0
 reward:
       true: 1
       currently_true: 2
