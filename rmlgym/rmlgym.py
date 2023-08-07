@@ -199,9 +199,7 @@ class RMLGym(gym.core.Env):
         # Calculate the reward
         #reward, reward_info = self.compute_reward(done)
         reward, reward_info = self.monitor_reward(done)
-        print(info)
         info.update(reward_info)
-        print(info)
         #print(self.data)
         #return o, reward, done, truncated ,info
         return o, reward, done, info
