@@ -198,8 +198,10 @@ class RMLGym(gym.core.Env):
 
         # Calculate the reward
         #reward, reward_info = self.compute_reward(done)
-        reward = self.monitor_reward(done)
-        #info.update(reward_info)
+        reward, reward_info = self.monitor_reward(done)
+        print(info)
+        info.update(reward_info)
+        print(info)
         #print(self.data)
         #return o, reward, done, truncated ,info
         return o, reward, done, info
@@ -233,6 +235,8 @@ class RMLGym(gym.core.Env):
         return self.env.seed(seed)
     def monitor_reward(self, done: bool) -> Tuple[float, dict]:
         #print(data)
+
+        info = dict()
         '''
         #NOT DENSE
         if (not self.dense) and done:
@@ -262,7 +266,8 @@ class RMLGym(gym.core.Env):
         #response = json.loads(response)
         # Check if the response is valid
         reward = self.rewards[response['verdict']]
-        return reward
+        info[self.rewards['name']] = reward
+        return reward, info
 
     def __str__(self):
         return f"<{type(self).__name__}{self.env}>"

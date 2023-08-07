@@ -2,7 +2,7 @@
 env_name: Pendulum-v0
 horizon: 1
 host: 127.0.0.1
-port: 8080
+port: 8081
 dense: True
 constants:
     - name: theta_thresh
@@ -21,6 +21,7 @@ variables:
       location: obs
       identifier: 0
 reward:
+      name: task
       true: 1
       currently_true: 2
       currently_false: -1
