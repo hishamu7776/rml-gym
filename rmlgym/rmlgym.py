@@ -8,7 +8,7 @@ from typing import TypeVar, Tuple
 ObsType = TypeVar("ObsType")
 ActType = TypeVar("ActType")
 
-
+'''
 class CustomEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.integer):
@@ -18,7 +18,7 @@ class CustomEncoder(json.JSONEncoder):
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
         return super().default(obj)
-
+'''
 def make(config_path: str, env=None) -> "RMLGym":
     return RMLGym(config_path, env)
 
@@ -227,6 +227,7 @@ class RMLGym(gym.core.Env):
 
     def close(self):
         #self.ws.close()
+        self.ws.close(1000, "Normal closure")
         return self.env.close()
 
     def seed(self, seed=None):
@@ -237,7 +238,8 @@ class RMLGym(gym.core.Env):
         info = dict()
 
         #json_string = '{"angle":.5}'#json.dumps(self.data, cls=CustomEncoder)
-        json_string = json.dumps(self.data, cls=CustomEncoder)
+        #json_string = json.dumps(self.data, cls=CustomEncoder)
+        json_string = json.dumps(self.data)
         
         self.ws.send(json_string)
         # Receive response from the server
