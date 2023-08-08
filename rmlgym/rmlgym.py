@@ -235,21 +235,7 @@ class RMLGym(gym.core.Env):
         #print(data)
 
         info = dict()
-        '''
-        #NOT DENSE
-        if (not self.dense) and done:
-            #print("Done : ",done,", Dense : ", self.dense)
-            #print("TS : ",self.timestep, ", STEP NUM : ",self.step_num, ", HORIZON : ", self.horizon_length)
-            if (self.timestep * self.step_num) < self.horizon_length:
-                reward = -1.0
-            else:
-                #print(len(self.data['time']),len(self.data['pos']),len(self.data['pos_dot']))
-                do_nothing = 0
-        #DENSE
-        if self.dense and (self.timestep * self.step_num) > self.horizon_length:
-            #print(len(self.data['time']),len(self.data['pos']),len(self.data['pos_dot']))
-            do_nothing = 0
-        '''
+
         #json_string = '{"angle":.5}'#json.dumps(self.data, cls=CustomEncoder)
         json_string = json.dumps(self.data, cls=CustomEncoder)
         
