@@ -1,7 +1,12 @@
-good_omega1 matches {omega: y} with y < .2;
-good_omega2 matches {omega: y} with y > -.2;
-good_theta1 matches {theta: x} with x <= 1;
-good_theta2 matches {theta: x} with x >= -1;
+good_theta1 matches {theta: x} with x <= 0.1;
+good_theta2 matches {theta: x} with x >= -0.1;
+good_omega1 matches {omega: y} with y < 0.1;
+good_omega2 matches {omega: y} with y > -0.1;
 
+any matches _;
 
-Main = (good_omega1 /\ good_omega2 /\ good_theta1 /\ good_theta2)*;
+Main = Good \/ Bad;
+
+Good = (good_theta1 /\ good_theta2 /\ good_omega1 /\ good_omega2) (Main \/ empty);
+
+Bad = any Main;

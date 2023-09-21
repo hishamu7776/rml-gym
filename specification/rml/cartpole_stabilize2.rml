@@ -1,0 +1,12 @@
+angle_max matches {angle: x} with x <= 0.0872665;
+angle_min matches {angle: x} with x >= -0.0872665;
+pos_max matches {pos: y} with y < 0.5;
+pos_min matches {pos: y} with y > -0.5;
+
+any matches _;
+
+Main = Good \/ Bad;
+
+Good = (angle_max /\ angle_min /\ pos_max /\ pos_min) (Main \/ empty);
+
+Bad = any Main;

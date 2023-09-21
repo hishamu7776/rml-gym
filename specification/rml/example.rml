@@ -1,0 +1,9 @@
+verify_x matches {x: x} with x < 5;
+
+any matches _;
+
+Main = Satisfied \/ NotSatisfied;
+
+Satisfied = (verify_x) (Main \/ empty);
+
+NotSatisfied = any Main;

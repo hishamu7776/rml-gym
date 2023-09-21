@@ -8,17 +8,6 @@ from typing import TypeVar, Tuple
 ObsType = TypeVar("ObsType")
 ActType = TypeVar("ActType")
 
-'''
-class CustomEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return super().default(obj)
-'''
 def make(config_path: str, env=None) -> "RMLGym":
     return RMLGym(config_path, env)
 
@@ -51,7 +40,7 @@ class RMLGym(gym.core.Env):
         """
         # Read the config YAML file
         with open(config_path, "r") as stream:
-            try:
+            try:    
                 config_dict = yaml.safe_load(stream)
             except yaml.YAMLError as exc:
                 print(exc)
@@ -79,10 +68,6 @@ class RMLGym(gym.core.Env):
 
         # Pull time information if it is provided
         self.timestep = 1 if 'timestep' not in config_dict.keys() else config_dict['timestep']
-        self.horizon_length = 1 if 'horizon' not in config_dict.keys() else config_dict['horizon']
-
-        # Pull the reward type from the config
-        self.dense = False if 'dense' not in config_dict.keys() else config_dict['dense']
 
         # Sort through specified constants that will be used in the specifications
         if 'constants' in config_dict.keys():
@@ -165,26 +150,17 @@ class RMLGym(gym.core.Env):
         #o, reward, done, truncated, info = self.env.step(action)
         o, reward, done, info = self.env.step(action)
         # Record and increment the time
-        #json_data = dict()
-        #json_data['sender'] = ''
-        #json_data['reciever'] = ''
-        #json_data['action'] = action
-        #self.data['time'].append(self.step_num * self.timestep)
-        #self.data['action'].append(action)
-        #json_data['time'] = self.step_num * self.timestep
+ 
         self.step_num += 1
         observations = dict()
         # Add variables to their lists
         for i in self.rml_variables:
             if i['location'] == 'obs':
                 observations['location'] = i['location']
-                #self.data[i['name']].append(o[i['identifier']])
                 observations[i['name']] = float(o[i['identifier']])
             elif i['location'] == 'info':
-                #self.data[i['name']].append(info[i['identifier']])
                 observations[i['name']] = float(info[i['identifier']])
             elif i['location'] == 'state':
-                #self.data[i['name']].append(self.__getattr__(i['identifier']))
                 observations[i['name']] = float(self.__getattr__(i['identifier']))
             else:
                 # make an error for this
@@ -192,12 +168,8 @@ class RMLGym(gym.core.Env):
         
         self.data = observations
         
-        #json_data['observations'] = observations
-        #json_data['done'] = done
-        
 
         # Calculate the reward
-        #reward, reward_info = self.compute_reward(done)
         reward, reward_info = self.monitor_reward(done)
         info.update(reward_info)
         #print(self.data)
@@ -216,7 +188,7 @@ class RMLGym(gym.core.Env):
         Returns:
             observation (object): the initial observation.
         """
-        # Reset the STL variable data
+        # Reset the RML variable data
         self.step_num = 0
         for key in self.data.keys():
             self.data[key] = []
@@ -237,8 +209,7 @@ class RMLGym(gym.core.Env):
 
         info = dict()
 
-        #json_string = '{"angle":.5}'#json.dumps(self.data, cls=CustomEncoder)
-        #json_string = json.dumps(self.data, cls=CustomEncoder)
+
         json_string = json.dumps(self.data)
         
         self.ws.send(json_string)
