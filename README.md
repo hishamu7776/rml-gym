@@ -75,7 +75,7 @@ pip install -e .
 This section explains how to use rmlgym library to train your reinforcement learning agents. The environment can be trained using any library which supports OpenAI's gym environment. 
 ### RML Specification 
 Firstly, you need to specify the specification in RML language. The following example is used to define the properties for Pendulum-v1 environment of gym library.
-```
+```js
 good_theta1 matches {theta: x} with x <= 0.5;
 good_theta2 matches {theta: x} with x >= -0.5;
 any matches _;
@@ -85,13 +85,14 @@ Bad = any Main;
 ```
 ### Compile RML Specification to Prolog Specification
 The RML Compiler will be available to download at github of [RML](https://github.com/RMLatDIBRIS/compiler).
-```
+```shell
 java -jar rml-compiler.jar --input file.rml --output file.pl
 ```
 
 ### Run Prolog Monitor
 Once you compiled the RML property, you need to run the interpret prolog specification and on monitor. The interpreter can be found in github page [Monitor](https://github.com/RMLatDIBRIS/monitor). Use the following command to run the monitor after downloading the monitor.
-```sh ./online_monitor.sh ./file.pl 8080
+```shell
+sh ./online_monitor.sh ./file.pl 8080
 ```
 ### Create Config File
 Once you setup monitor, you could create the configuration file. Include the port number and host of monitor in the configuration file like shown above.
@@ -99,7 +100,7 @@ Once you setup monitor, you could create the configuration file. Include the por
 ### Load the environment
 
 You could load the environment as follows.
-```
+```Python
 import gym
 from functools import partial
 import rmlgym
