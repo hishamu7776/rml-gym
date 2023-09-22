@@ -85,12 +85,15 @@ Bad = any Main;
 ```
 ### Compile RML Specification to Prolog Specification
 The RML Compiler will be available to download at github of [RML](https://github.com/RMLatDIBRIS/compiler).
+Compiler is also availabe in compiler-rml folder.
 ```shell
 java -jar rml-compiler.jar --input file.rml --output file.pl
 ```
 
 ### Run Prolog Monitor
-Once you compiled the RML property, you need to run the interpret prolog specification and on monitor. The interpreter can be found in github page [Monitor](https://github.com/RMLatDIBRIS/monitor). Use the following command to run the monitor after downloading the monitor.
+Once you compiled the RML property, you need to run the interpret prolog specification and on monitor. The interpreter can be found in github page [Monitor](https://github.com/RMLatDIBRIS/monitor). 
+Monitor is also availabe in monitor_rml folder.
+Use the following command to run the monitor after downloading the monitor.
 ```shell
 sh ./online_monitor.sh ./file.pl 8080
 ```
