@@ -53,7 +53,7 @@ class RMLGym(gym.core.Env):
             self.env = env
         else:
             self.env = gym.make(config_dict['env_name'])
-
+        self.config_dict = config_dict
         self._action_space = None
         self._observation_space = None
         self._reward_range = None
@@ -63,13 +63,11 @@ class RMLGym(gym.core.Env):
         self.data['time'] = []
         self.step_num = 0
         # Create a WebSocket object.
-        self.ws = websocket.WebSocket()
-        host = f'ws://{config_dict["host"]}:{config_dict["port"]}'
-        # Connect the WebSocket object to the server.
-        self.ws.connect(host)
+        
 
         # Pull time information if it is provided
         self.timestep = 1 if 'timestep' not in config_dict.keys() else config_dict['timestep']
+
 
         # Sort through specified variables that will be tracked
         self.rml_variables = config_dict['variables']
@@ -208,14 +206,18 @@ class RMLGym(gym.core.Env):
 
         #info = dict(self.data)
         json_string = json.dumps(self.data)
-        self.ws.send(json_string)
+        ws = websocket.WebSocket()
+        host = f'ws://{self.config_dict["host"]}:{self.config_dict["port"]}'
+        # Connect the WebSocket object to the server.
+        ws.connect(host)
+        ws.send(json_string)
         # Receive response from the server
-        response = self.ws.recv()
+        response = ws.recv()
         # Convert the JSON string to a Python dictionary
         
         response = json.loads(response)
         #monitor_rew = bool(response[1:])
-        
+        ws.close()
 
         #response = json.loads(response)
         # Check if the response is valid
