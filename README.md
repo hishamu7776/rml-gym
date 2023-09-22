@@ -2,21 +2,6 @@
 RMLGym is a tool for modifying reinforcement learning environments to incorporate RML specifications in reward function. RMLGym works by augmenting OpenAI's gym environment and uses RML specification to define reward functions. RMLGym aims to bridge the gap between RL and runtime verification, a technique that monitors and verifies the behavior of a system at runtime. The framework uses Runtime Monitoring Language (RML), a runtime verification tool that allows more complex properties to be defined and verified, as reward constructors. The reward constructors generate rewards based on the satisfaction or violation of the specifications, rather than a predefined reward function.
 
 ## CONFIG setup
-
-# stl-gym
-A tool for modifying _Reinforcement Learning_ (RL) environments to incorporate _Signal Temporal Logic_ (STL) specifications in the reward function. It works by augmenting exisiting RL environments that follow the Gym API to replace their existing reward function with the robustness degree, a measure of of how well the STL specification(s) is/are satisfied. The figure below shows a representation of how this augmentation is done. 
-
-![Representation of how STLGym augments existing Gym environments.](./docs/STLGym.png)
-
-
-Each loop executed in the figure above is referred to as a _timestep_ and is executed in the Gym API using the `.step()` function, which is used in the form
-```Python
-next_observation, reward, done, info = env.step(u_NN)
-```
-where `next_observation` is the output _o_ from the observer, `reward` is the ouput _r_ from _RTAMT_, `done` is a boolean indicator of whether the episode is over, and `info` is a dictionary with relevant information that is not necessarily used by the RL algorithm for learning, but might be important to know.
-
-
-## CONFIG setup
 To create an RMLgym environment, you need to provide a configuration file that specifies the details RML properties you want to enforce. You can pass the path to this file as an argument when you initialize the environment like this:
  
 ```Python
