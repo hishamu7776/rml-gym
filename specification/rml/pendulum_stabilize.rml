@@ -3,8 +3,11 @@ good_theta2 matches {theta: x} with x >= -0.5;
 
 any matches _;
 
+
 Main = Good \/ Bad;
 
 Good = (good_theta1 /\ good_theta2) (Main \/ empty);
 
 Bad = any Main;
+
+

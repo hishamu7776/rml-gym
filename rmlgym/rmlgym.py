@@ -1,4 +1,6 @@
 import json
+import re
+
 import websocket
 import numpy as np
 import gym
@@ -68,10 +70,6 @@ class RMLGym(gym.core.Env):
 
         # Pull time information if it is provided
         self.timestep = 1 if 'timestep' not in config_dict.keys() else config_dict['timestep']
-
-        # Sort through specified constants that will be used in the specifications
-        if 'constants' in config_dict.keys():
-            constants = config_dict['constants']
 
         # Sort through specified variables that will be tracked
         self.rml_variables = config_dict['variables']
@@ -153,6 +151,7 @@ class RMLGym(gym.core.Env):
  
         self.step_num += 1
         observations = dict()
+        # observations['action'] = action
         # Add variables to their lists
         for i in self.rml_variables:
             if i['location'] == 'obs':
@@ -171,7 +170,7 @@ class RMLGym(gym.core.Env):
 
         # Calculate the reward
         reward, reward_info = self.monitor_reward(done)
-        info.update(reward_info)
+        #info.update(reward_info)
         #print(self.data)
         #return o, reward, done, truncated ,info
         return o, reward, done, info
@@ -199,7 +198,7 @@ class RMLGym(gym.core.Env):
 
     def close(self):
         #self.ws.close()
-        self.ws.close(1000, "Normal closure")
+        #self.ws.close(1000, "Normal closure")
         return self.env.close()
 
     def seed(self, seed=None):
@@ -207,24 +206,22 @@ class RMLGym(gym.core.Env):
     def monitor_reward(self, done: bool) -> Tuple[float, dict]:
         #print(data)
 
-        info = dict()
-
-
+        #info = dict(self.data)
         json_string = json.dumps(self.data)
-        
         self.ws.send(json_string)
         # Receive response from the server
         response = self.ws.recv()
         # Convert the JSON string to a Python dictionary
+        
         response = json.loads(response)
         #monitor_rew = bool(response[1:])
-        #print(monitor_rew)
+        
 
         #response = json.loads(response)
         # Check if the response is valid
         reward = self.rewards[response['verdict']]
-        info[self.rewards['name']] = reward
-        return reward, info
+        #info[self.rewards['name']] = reward
+        return reward, {}
 
     def __str__(self):
         return f"<{type(self).__name__}{self.env}>"

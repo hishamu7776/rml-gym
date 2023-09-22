@@ -1,20 +1,6 @@
 env_name: CartPole-v1
 host: localhost
 port: 8080
-dense: True
-constants:
-    - name: angle_max_thresh
-      type: float
-      value: 0.20943951023
-    - name: angle_stability_thresh
-      type: float
-      value: 0.0349066
-    - name: pos_max_thresh
-      type: float
-      value: 2.4
-    - name: pos_stability_thresh
-      type: float
-      value: 0.5
 variables:
     - name: pos
       type: float
