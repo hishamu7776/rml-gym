@@ -1,80 +1,109 @@
-# rml-gym
-RMLGym is a tool for modifying reinforcement learning environments to incorporate RML specifications in reward function. RMLGym works by augmenting OpenAI's gym environment and uses RML specification to define reward functions. RMLGym aims to bridge the gap between RL and runtime verification, a technique that monitors and verifies the behavior of a system at runtime. The framework uses Runtime Monitoring Language (RML), a runtime verification tool that allows more complex properties to be defined and verified, as reward constructors. The reward constructors generate rewards based on the satisfaction or violation of the specifications, rather than a predefined reward function.
+# RMLGym
 
-## CONFIG setup
-To create an RMLgym environment, you need to provide a configuration file that specifies the details RML properties you want to enforce. You can pass the path to this file as an argument when you initialize the environment like this:
- 
-```Python
+**RMLGym** is a tool for modifying reinforcement learning environments to incorporate RML specifications into the reward function. It works by augmenting OpenAI's Gym environments and using RML specifications to shape rewards.
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Example: Pendulum-v0](#example-pendulum-v0)
+- [RML Specification](#rml-specification)
+- [Compiling and Running the RML Monitor](#compiling-and-running-the-rml-monitor)
+- [Citation](#citation)
+- [Resources and Links](#resources-and-links)
+
+---
+
+## Features
+
+- Integrate RML (Runtime Monitoring Language) specifications in RL reward functions.
+- Easy configuration through YAML files.
+- Compatible with OpenAI Gym environments.
+- Support for custom monitors and reward shaping.
+
+---
+
+## Installation
+
+### 1. Install Prerequisites
+
+- Follow the [Runtime Monitoring Language implementation guide](https://rmlatdibris.github.io/implementation.html) for RML requirements.
+
+### 2. Install RMLGym
+
+```bash
+git clone https://github.com/hishamu7776/rml-gym.git
+cd rml-gym/
+pip install -e .
+```
+
+---
+
+## Quick Start
+
+```python
 import gym
 from functools import partial
 import rmlgym
 
-# For a single environment object
+# Load environment with RML configuration
 env = rmlgym.make('config_path/config.yaml', env=None)
 
-# For the function version required by some algorithms in order to run simulations in parallel
+# For parallel simulations
 env_fn = partial(rmlgym.make, 'config_path/config.yaml')
 ```
 
-You can either use an existing environment or specify a new one in the configuration file that defines the RML properties for the RMLgym environment. The configuration file has several sections that explain the RML specifications and other settings. You can see an example of a configuration file below. The sections can be in any order.
+---
 
-### ```env_name:```
-If an environment object is not provided upon initialization, the registered name of the environment must be specified in the config file. For more information on registering a custom environment, we recommend reading the [OpenAI Gym](https://github.com/openai/gym) README.md file for more information.
+## Configuration
 
-### ```host:```
-Host is the hostname or IP address of RML monitor.
+Create a configuration YAML file specifying:
 
-### ```port:```
-Port is the port of RML monitor.
+- `env_name:` Gym environment name (if not provided as an object)
+- `host:` Hostname or IP of the RML monitor
+- `port:` Port of the RML monitor
+- `variables:` Variables to monitor (from obs, info, or state)
+- `reward:` Reward mapping for RML verdicts
 
-### ```variables:```
-In this section of the configuration file, users define the environment variables that need to be recorded in order to evaluate the specifications. The recorded variable values will make up the multi-variate signal used in the robustness degree calculation. To define a variable, users must specify a `name`, the data `type` (`bool`, `int`, or `float`), `location`, and `identifier`. The name must match the name used in the specification. The location specifies how to access the variable in the environment. The location can be one of the following 3 options: 
-1. __obs__: This option pulls the data from the output `next_observation` from the environment' `.step()` function. Provided the observation is a vector (we do not support dictionary observations yet), the `identifier` is the integer index that identifies the variable within the vector.
-2. __info__: This option pulls the data from the `info` dictionary output by the `.step()` function. This is useful for accessing state data that isn't included in the observation, but could be crucial for defining _safe_ behavior. The `identifier` for this option is the dictionary key associated with the desired data. We do not support nested dictionaries at this time, but hope to include support in the future.
-3. __state__: This option pulls from the environment's internal variables. The `identifier` is the variable name (e.g. `var_name`), which would record the value of `env.var_name` at each timestep. When possible, we recommend modifying the Gym environment so this information is included in the `info` output instead of accessing directly. 
+### Example Sections
 
-### ```reward:```
-This section provides reward associated with the verdicts. It has `true`, `false`, `currently_true`, and `currently_false` as verdicts. A `name` has to specify for the specification.
-
-
-## Example: Pendulum-v0
 ```yaml
-
 env_name: Pendulum-v0
 host: 127.0.0.1
 port: 8081
 variables:
-    - name: omega
-      type: float
-      location: obs
-      identifier: 2
-    - name: theta
-      type: float
-      location: obs
-      identifier: 0
+  - name: omega
+    type: float
+    location: obs
+    identifier: 2
+  - name: theta
+    type: float
+    location: obs
+    identifier: 0
 reward:
-      name: task
-      true: 1
-      currently_true: 2
-      currently_false: -1
-      false: -1
+    name: task
+    true: 1
+    currently_true: 2
+    currently_false: -1
+    false: -1
 ```
 
-## Installation
-### Install prerequisites for RML
-We recommend following [Runtime Monitoring Language](https://rmlatdibris.github.io/implementation.html) website for installing the requirements for RML.
-### Install RMLGym
-You could follow the following commands.
-```
-git clone https://github.com/hishamu7776/rml-gym.git
-cd rml-gym/
-pip install -e .
+---
 
-```
-## How to run
-This section explains how to use rmlgym library to train your reinforcement learning agents. The environment can be trained using any library which supports OpenAI's gym environment. 
-### RML Specification 
-Firstly, you need to specify the specification in RML language. The following example is used to define the properties for Pendulum-v1 environment of gym library.
+## Example: Pendulum-v0
+
+See above for a sample configuration for the Pendulum-v0 environment.
+
+---
+
+## RML Specification
+
+Define your specifications in RML language. Example for `Pendulum-v1`:
+
 ```js
 good_theta1 matches {theta: x} with x <= 0.5;
 good_theta2 matches {theta: x} with x >= -0.5;
@@ -83,39 +112,50 @@ Main = Good \/ Bad;
 Good = (good_theta1 /\ good_theta2) (Main \/ empty);
 Bad = any Main;
 ```
-### Compile RML Specification to Prolog Specification
-The RML Compiler will be available to download at github of [RML](https://github.com/RMLatDIBRIS/compiler).
-Compiler is also availabe in compiler-rml folder.
-```shell
-java -jar rml-compiler.jar --input file.rml --output file.pl
+
+---
+
+## Compiling and Running the RML Monitor
+
+1. **Compile RML Specification**
+   - Download the compiler from [RML Compiler GitHub](https://github.com/RMLatDIBRIS/compiler)
+   - Or use the included `compiler-rml` folder.
+
+   ```bash
+   java -jar rml-compiler.jar --input file.rml --output file.pl
+   ```
+
+2. **Run Prolog Monitor**
+   - Download from [Monitor GitHub](https://github.com/RMLatDIBRIS/monitor)
+   - Or use the included `monitor_rml` folder.
+
+   ```bash
+   sh ./online_monitor.sh ./file.pl 8080
+   ```
+
+---
+
+## Citation
+
+If you use RMLGym in your research, please cite:
+
+**Paper:**  
+["RMLGym: a Formal Reward Machine Framework for Reinforcement Learning"](https://ceur-ws.org/Vol-3579/paper1.pdf)
+
+**BibTeX:**
+```bibtex
+@inproceedings{unniyankal2023rmlgym,
+  title={RMLGym: a Formal Reward Machine Framework for Reinforcement Learning.},
+  author={Unniyankal, Hisham and Belardinelli, Francesco and Ferrando, Angelo and Malvone, Vadim},
+  year={2023}
+}
 ```
 
-### Run Prolog Monitor
-Once you compiled the RML property, you need to run the interpret prolog specification and on monitor. The interpreter can be found in github page [Monitor](https://github.com/RMLatDIBRIS/monitor). 
-Monitor is also availabe in monitor_rml folder.
-Use the following command to run the monitor after downloading the monitor.
-```shell
-sh ./online_monitor.sh ./file.pl 8080
-```
-### Create Config File
-Once you setup monitor, you could create the configuration file. Include the port number and host of monitor in the configuration file like shown above.
+---
 
-### Load the environment
+## Resources and Links
 
-You could load the environment as follows.
-```Python
-import gym
-from functools import partial
-import rmlgym
-
-# Normal way to load environment
-config_path = './examples/environment.yaml'
-rml_env = rmlgym.make(config_path)
-
-# Alternative method
-rml_env = RMLGym(config_path)
-
-# For the function version required by some algorithms in order to run simulations in parallel
-env_fn = partial(rmlgym.make, config_path)
-
-```
+- [Paper PDF](https://ceur-ws.org/Vol-3579/paper1.pdf)
+- [RML Compiler](https://github.com/RMLatDIBRIS/compiler)
+- [RML Monitor](https://github.com/RMLatDIBRIS/monitor)
+- [RML Implementation Guide](https://rmlatdibris.github.io/implementation.html)
